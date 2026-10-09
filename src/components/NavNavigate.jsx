@@ -6,7 +6,7 @@ const NavCreator = ({ children }) => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const siteSettings = useSiteSettings();
-  const siteName = siteSettings?.site_name || 'Portfolio';
+  const siteName = siteSettings?.site_name || 'Nadia Aulya';
 
   const navItems = [
     { path: '/', icon: 'ri-home-4-line', activeIcon: 'ri-home-4-fill', label: 'Home' },
