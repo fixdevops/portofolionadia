@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../../supabase";
 import Layout from "../../components/Layout";
+import { uploadAsset, deleteAsset, pathFromPublicUrl } from "../../lib/supabaseStorage";
 import {
   Plus, Pencil, Trash2, Save, X,
   FileText, ExternalLink, ToggleLeft, ToggleRight,
+  Upload, Loader2, FileCheck,
 } from "lucide-react";
 
 const COLOR_THEMES = [
@@ -123,6 +125,12 @@ export default function ManageResume() {
   const [editId, setEditId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // PDF upload state
+  const [pdfFile, setPdfFile] = useState(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const pdfInputRef = useRef(null);
+
   useEffect(() => { fetchResumes(); }, []);
 
   const fetchResumes = async () => {
@@ -150,8 +158,26 @@ export default function ManageResume() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      let pdf_url = formData.pdf_url;
+
+      // Upload PDF baru jika ada file yang dipilih
+      if (pdfFile) {
+        setUploadingPdf(true);
+        // Hapus PDF lama di storage jika ada
+        if (editId && formData.pdf_url) {
+          const oldPath = pathFromPublicUrl(formData.pdf_url);
+          if (oldPath) await deleteAsset(oldPath);
+        }
+        const { publicUrl } = await uploadAsset(pdfFile, "cv", (p) => setUploadProgress(p));
+        pdf_url = publicUrl;
+        setUploadingPdf(false);
+        setPdfFile(null);
+        setUploadProgress(0);
+      }
+
       const payload = {
         ...formData,
+        pdf_url,
         sort_order: parseInt(formData.sort_order) || 0,
         updated_at: new Date().toISOString(),
       };
@@ -168,6 +194,7 @@ export default function ManageResume() {
     } catch (err) {
       console.error("Error saving resume:", err);
       alert("Error: " + err.message);
+      setUploadingPdf(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -191,6 +218,12 @@ export default function ManageResume() {
   const handleDelete = async (id) => {
     if (!window.confirm("Hapus resume ini?")) return;
     try {
+      // Hapus PDF dari storage juga
+      const item = resumes.find((r) => r.id === id);
+      if (item?.pdf_url) {
+        const oldPath = pathFromPublicUrl(item.pdf_url);
+        if (oldPath) await deleteAsset(oldPath);
+      }
       const { error } = await supabase.from("my_resume").delete().eq("id", id);
       if (error) throw error;
       fetchResumes();
@@ -217,6 +250,9 @@ export default function ManageResume() {
   const resetForm = () => {
     setFormData(EMPTY_FORM);
     setEditId(null);
+    setPdfFile(null);
+    setUploadProgress(0);
+    if (pdfInputRef.current) pdfInputRef.current.value = "";
   };
 
   const selectedTheme = COLOR_THEMES.find((t) => t.value === formData.color_theme) || COLOR_THEMES[0];
@@ -257,19 +293,53 @@ export default function ManageResume() {
                 />
               </div>
 
-              {/* PDF URL */}
+              {/* PDF Upload */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">PDF URL</label>
-                <div className="relative">
-                  <ExternalLink size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text" name="pdf_url" value={formData.pdf_url}
-                    onChange={handleChange}
-                    placeholder="/cv/frontdev.pdf atau https://..."
-                    className="w-full pl-8 pr-3 py-2 bg-white text-gray-800 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  />
+                <label className="block text-sm font-medium text-gray-700 mb-1">File PDF Resume</label>
+                <div className="space-y-2">
+                  {/* Tampilkan file terpilih atau URL yang sudah ada */}
+                  {(pdfFile || formData.pdf_url) && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-md text-xs text-green-700">
+                      <FileCheck size={13} />
+                      <span className="truncate flex-1">
+                        {pdfFile ? pdfFile.name : "PDF tersimpan di storage"}
+                      </span>
+                      <button type="button" onClick={() => {
+                        setPdfFile(null);
+                        setFormData((p) => ({ ...p, pdf_url: "" }));
+                        if (pdfInputRef.current) pdfInputRef.current.value = "";
+                      }} className="text-red-400 hover:text-red-600 flex-shrink-0">
+                        <X size={12} />
+                      </button>
+                    </div>
+                  )}
+                  <label className="flex items-center gap-2 cursor-pointer w-fit text-xs px-3 py-2 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors">
+                    <Upload size={13} />
+                    {formData.pdf_url ? "Ganti PDF" : "Upload PDF"}
+                    <input
+                      ref={pdfInputRef}
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        if (f.size > 10 * 1024 * 1024) {
+                          alert("Ukuran PDF maksimal 10MB");
+                          return;
+                        }
+                        setPdfFile(f);
+                      }}
+                    />
+                  </label>
+                  {uploadingPdf && (
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <Loader2 size={12} className="animate-spin" />
+                      Mengupload... {uploadProgress}%
+                    </div>
+                  )}
+                  <p className="text-[10px] text-gray-400">PDF max 10MB — disimpan di folder <code className="bg-gray-100 px-1 rounded">cv/</code></p>
                 </div>
-                <p className="text-xs text-gray-400 mt-0.5">Path relatif atau URL lengkap ke file PDF</p>
               </div>
 
               {/* Sort Order */}

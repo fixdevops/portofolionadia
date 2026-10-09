@@ -27,11 +27,16 @@ export default function ProfileSection() {
     );
   }
 
-  // Fallback ke data statis kalau tabel kosong
-  const name    = profile?.name    || "Fikri Asyam";
-  const role    = profile?.role    || "Cysec Engineer || Software Engineer";
-  const bio     = profile?.bio     || "";
-  const photo   = profile?.photo_url || `${import.meta.env.BASE_URL}fotoprofile fixz.png`;
+  // Default values — ditampilkan kalau DB belum diisi, bisa diubah lewat admin
+  const DEFAULT_NAME  = "Nadia Aulya Oktaviana";
+  const DEFAULT_ROLE  = "UI/UX Designer || Canva Specialist";
+  const DEFAULT_BIO   = "Saya Nadia Aulya Oktaviana, seorang mahasiswa yang kreatif dan berdedikasi tinggi. Saya memiliki ketertarikan mendalam di bidang UI/UX design serta pembuatan desain visual menggunakan Canva. Berlatar belakang pendidikan di Universitas Nahdlatul Ulama Sunan Giri, saya percaya bahwa pengembangan diri adalah kunci utama dalam mencapai cita-cita. Saya selalu terbuka untuk mempelajari hal baru dan mengasah keterampilan demi menciptakan karya visual yang intuitif dan berdampak.";
+  const DEFAULT_PHOTO = `${import.meta.env.BASE_URL}fotoprofile fixz.png`;
+
+  const name    = profile?.name    || DEFAULT_NAME;
+  const role    = profile?.role    || DEFAULT_ROLE;
+  const bio     = profile?.bio     ?? DEFAULT_BIO;
+  const photo   = profile?.photo_url || DEFAULT_PHOTO;
 
   const socials = [
     { href: profile?.github_url,    icon: "ri-github-fill",    hover: "hover:text-black" },

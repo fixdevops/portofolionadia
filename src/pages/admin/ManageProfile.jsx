@@ -75,11 +75,29 @@ export default function ManageProfile() {
   const [uploadingOg, setUploadingOg]     = useState(false);
   const ogInputRef                        = useRef(null);
 
+  // ── default profile (fallback) ────────────────────────────
+  const DEFAULT_PROFILE = {
+    name:           "Nadia Aulya Oktaviana",
+    role:           "UI/UX Designer || Canva Specialist",
+    bio:            "Saya Nadia Aulya Oktaviana, seorang mahasiswa yang kreatif dan berdedikasi tinggi. Saya memiliki ketertarikan mendalam di bidang UI/UX design serta pembuatan desain visual menggunakan Canva. Berlatar belakang pendidikan di Universitas Nahdlatul Ulama Sunan Giri, saya percaya bahwa pengembangan diri adalah kunci utama dalam mencapai cita-cita. Saya selalu terbuka untuk mempelajari hal baru dan mengasah keterampilan demi menciptakan karya visual yang intuitif dan berdampak.",
+    github_url:     "",
+    linkedin_url:   "",
+    email:          "",
+    instagram_url:  "",
+    tiktok_url:     "",
+    github_username:"",
+    photo_url:      "",
+  };
+
   // ── fetch profile ─────────────────────────────────────────
   useEffect(() => {
     supabase.from("profile").select("*").limit(1).maybeSingle()
-      .then(({ data }) => { setProfile(data || {}); setProfileLoading(false); });
-  }, []);
+      .then(({ data }) => {
+        // Merge default dengan data dari DB supaya form tidak kosong
+        setProfile(data ? { ...DEFAULT_PROFILE, ...data } : { ...DEFAULT_PROFILE });
+        setProfileLoading(false);
+      });
+  }, []); // eslint-disable-line
 
   // ── fetch skills + categories ─────────────────────────────
   const fetchSkillsAndCats = async () => {
@@ -262,10 +280,13 @@ export default function ManageProfile() {
         {/* ── TAB: PROFIL ─────────────────────────────────── */}
         {activeTab === "Profil" && (
           <div className="bg-white border border-zinc-100 rounded-2xl p-6">
-            <div className="flex items-center gap-2 mb-5">
+            <div className="flex items-center gap-2 mb-3">
               <User size={16} className="text-zinc-400" />
               <h2 className="text-sm font-semibold text-zinc-800">Profil</h2>
             </div>
+            <p className="text-xs text-zinc-400 mb-5 bg-zinc-50 rounded-lg p-3 border border-zinc-100">
+              Data profil hanya bisa <strong className="text-zinc-600">diubah</strong> melalui halaman ini. Profil tidak dapat dihapus — pastikan selalu ada data yang tampil di website.
+            </p>
 
             {profileLoading ? (
               <div className="flex justify-center py-10"><Loader2 size={20} className="animate-spin text-zinc-300" /></div>

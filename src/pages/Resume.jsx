@@ -5,12 +5,12 @@ import ChatRoomComponents from '../components/ChatRoom';
 import { supabase } from '../supabase';
 
 const COLOR_MAP = {
-  blue:   { bg: "bg-blue-100",   text: "text-blue-600",   border: "border-blue-200",   hover: "hover:border-blue-200" },
-  purple: { bg: "bg-purple-100", text: "text-purple-600", border: "border-purple-200", hover: "hover:border-purple-200" },
-  green:  { bg: "bg-green-100",  text: "text-green-600",  border: "border-green-200",  hover: "hover:border-green-200" },
-  red:    { bg: "bg-red-100",    text: "text-red-600",    border: "border-red-200",    hover: "hover:border-red-200" },
-  orange: { bg: "bg-orange-100", text: "text-orange-600", border: "border-orange-200", hover: "hover:border-orange-200" },
-  gray:   { bg: "bg-gray-100",   text: "text-gray-600",   border: "border-gray-200",   hover: "hover:border-gray-200" },
+  blue:   { bg: "bg-blue-100",   text: "text-blue-600",   border: "border-blue-200",   hover: "hover:border-blue-300",   btn: "bg-blue-600 hover:bg-blue-700" },
+  purple: { bg: "bg-purple-100", text: "text-purple-600", border: "border-purple-200", hover: "hover:border-purple-300", btn: "bg-purple-600 hover:bg-purple-700" },
+  green:  { bg: "bg-green-100",  text: "text-green-600",  border: "border-green-200",  hover: "hover:border-green-300",  btn: "bg-green-600 hover:bg-green-700" },
+  red:    { bg: "bg-red-100",    text: "text-red-600",    border: "border-red-200",    hover: "hover:border-red-300",    btn: "bg-red-600 hover:bg-red-700" },
+  orange: { bg: "bg-orange-100", text: "text-orange-600", border: "border-orange-200", hover: "hover:border-orange-300", btn: "bg-orange-600 hover:bg-orange-700" },
+  gray:   { bg: "bg-gray-100",   text: "text-gray-600",   border: "border-gray-200",   hover: "hover:border-gray-300",   btn: "bg-gray-600 hover:bg-gray-700" },
 };
 
 function ResumeIcon({ type, colorClass }) {
@@ -92,6 +92,7 @@ function ResumeIcon({ type, colorClass }) {
 export default function Resume() {
   const [resumes, setResumes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activePdf, setActivePdf] = useState(null); // { url, title }
 
   useEffect(() => {
     const fetchResumes = async () => {
@@ -112,6 +113,13 @@ export default function Resume() {
     fetchResumes();
   }, []);
 
+  // Tutup modal saat tekan Escape
+  useEffect(() => {
+    const handleKey = (e) => { if (e.key === "Escape") setActivePdf(null); };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
+
   return (
     <div className="bg-gray-50 min-h-screen text-gray-800">
       <NavNavigate />
@@ -130,7 +138,7 @@ export default function Resume() {
               return (
                 <div
                   key={item.id}
-                  className={`bg-white p-5 rounded-lg border border-gray-200 ${theme.hover} transition-colors`}
+                  className={`bg-white p-5 rounded-lg border ${theme.border} ${theme.hover} transition-colors`}
                 >
                   <div className="flex items-center gap-3 mb-4">
                     <div className={`${theme.bg} p-2 rounded-full`}>
@@ -145,16 +153,18 @@ export default function Resume() {
                     <p className="text-gray-600 text-sm mb-5">{item.description}</p>
                   )}
                   {item.pdf_url ? (
-                    <a
-                      href={item.pdf_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`text-sm font-medium ${theme.text} hover:opacity-80 inline-flex items-center`}
+                    <button
+                      onClick={() => setActivePdf({ url: item.pdf_url, title: item.title })}
+                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white ${theme.btn} transition-colors`}
                     >
-                      View PDF <span className="ml-1">→</span>
-                    </a>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      Lihat CV
+                    </button>
                   ) : (
-                    <span className="text-sm text-gray-400 italic">PDF not available</span>
+                    <span className="text-sm text-gray-400 italic">PDF tidak tersedia</span>
                   )}
                 </div>
               );
@@ -163,6 +173,51 @@ export default function Resume() {
         )}
       </main>
       <Footer />
+
+      {/* ── PDF Viewer Modal ── */}
+      {activePdf && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col bg-black/80 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setActivePdf(null); }}
+        >
+          {/* Toolbar */}
+          <div className="flex items-center justify-between px-4 py-3 bg-white/10 backdrop-blur-md flex-shrink-0">
+            <span className="text-white font-medium text-sm truncate">{activePdf.title}</span>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Download */}
+              <a
+                href={activePdf.url}
+                download
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download
+              </a>
+              {/* Tutup */}
+              <button
+                onClick={() => setActivePdf(null)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/20 hover:bg-red-500/70 text-white text-xs transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Tutup
+              </button>
+            </div>
+          </div>
+
+          {/* PDF Embed */}
+          <div className="flex-1 overflow-hidden">
+            <iframe
+              src={`${activePdf.url}#toolbar=1&navpanes=0&scrollbar=1`}
+              title={activePdf.title}
+              className="w-full h-full border-0"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
